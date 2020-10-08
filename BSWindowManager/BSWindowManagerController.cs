@@ -1,4 +1,5 @@
-﻿using BSWindowManager.Utils;
+﻿using BSWindowManager.Configuration;
+using BSWindowManager.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -43,6 +44,10 @@ namespace BSWindowManager
         private void SceneManager_activeSceneChanged(Scene arg0, Scene arg1)
         {
             try {
+                if (!PluginConfig.Instance.AutoActive) {
+                    return;
+                }
+
                 var Winhdl = WindowManager.FindWindow(null, "Beat Saber");
                 if (Winhdl == IntPtr.Zero) {
                     return;
