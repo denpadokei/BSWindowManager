@@ -1,4 +1,5 @@
-﻿using BSWindowManager.Utils;
+﻿using BSWindowManager.Configuration;
+using BSWindowManager.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -19,6 +20,8 @@ namespace BSWindowManager
     {
         public static BSWindowManagerController Instance { get; private set; }
 
+        private bool _autoAvtive = false;
+
         // These methods are automatically called by Unity, you should remove any you aren't using.
         #region Monobehaviour Messages
         /// <summary>
@@ -35,14 +38,27 @@ namespace BSWindowManager
             }
             GameObject.DontDestroyOnLoad(this); // Don't destroy this object on scene changes
             Instance = this;
+            PluginConfig.Instance.OnReloadEvent -= this.Instance_OnChangedEvent;
+            PluginConfig.Instance.OnReloadEvent += this.Instance_OnChangedEvent;
 
+            PluginConfig.Instance.OnChangedEvent -= this.Instance_OnChangedEvent;
+            PluginConfig.Instance.OnChangedEvent += this.Instance_OnChangedEvent;
             SceneManager.activeSceneChanged += this.SceneManager_activeSceneChanged;
             Plugin.Log?.Debug($"{name}: Awake()");
+        }
+
+        private void Instance_OnChangedEvent(PluginConfig obj)
+        {
+            this._autoAvtive = obj.AutoActive;
         }
 
         private void SceneManager_activeSceneChanged(Scene arg0, Scene arg1)
         {
             try {
+                if (!this._autoAvtive) {
+                    return;
+                }
+
                 var Winhdl = WindowManager.FindWindow(null, "Beat Saber");
                 if (Winhdl == IntPtr.Zero) {
                     return;

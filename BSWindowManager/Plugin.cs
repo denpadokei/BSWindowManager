@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+﻿using BeatSaberMarkupLanguage.Settings;
+using BSWindowManager.UI;
 using IPA;
 using IPA.Config;
 using IPA.Config.Stores;
-using UnityEngine.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using IPALogger = IPA.Logging.Logger;
 
 namespace BSWindowManager
@@ -17,6 +15,8 @@ namespace BSWindowManager
     {
         internal static Plugin Instance { get; private set; }
         internal static IPALogger Log { get; private set; }
+
+        private bool _isInit;
 
         [Init]
         /// <summary>
@@ -47,7 +47,18 @@ namespace BSWindowManager
         {
             Log.Debug("OnApplicationStart");
             new GameObject("BSWindowManagerController").AddComponent<BSWindowManagerController>();
+            new GameObject("Setting").AddComponent<BSMLSettings>();
+            SceneManager.activeSceneChanged += this.SceneManager_activeSceneChanged;
+        }
 
+        private void SceneManager_activeSceneChanged(Scene arg0, Scene arg1)
+        {
+            if (this._isInit && arg1.name != "MenuCore") {
+                return;
+            }
+
+            BSMLSettings.instance.AddSettingsMenu("BS WINDOW MANAGER", Setting.instance.ResourceName, Setting.instance);
+            this._isInit = true;
         }
 
         [OnExit]
