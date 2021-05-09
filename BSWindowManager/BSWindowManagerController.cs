@@ -44,6 +44,7 @@ namespace BSWindowManager
             PluginConfig.Instance.OnChangedEvent -= this.Instance_OnChangedEvent;
             PluginConfig.Instance.OnChangedEvent += this.Instance_OnChangedEvent;
             SceneManager.activeSceneChanged += this.SceneManager_activeSceneChanged;
+            this._autoAvtive = PluginConfig.Instance.AutoActive;
             Plugin.Log?.Debug($"{name}: Awake()");
         }
 
