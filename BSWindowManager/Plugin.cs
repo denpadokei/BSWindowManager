@@ -1,4 +1,5 @@
 ﻿using BeatSaberMarkupLanguage.Settings;
+using BS_Utils.Utilities;
 using BSWindowManager.UI;
 using IPA;
 using IPA.Config;
@@ -15,9 +16,6 @@ namespace BSWindowManager
     {
         internal static Plugin Instance { get; private set; }
         internal static IPALogger Log { get; private set; }
-
-        private bool _isInit;
-
         [Init]
         /// <summary>
         /// Called when the plugin is first loaded by IPA (either when the game starts or when the plugin is enabled if it starts disabled).
@@ -34,7 +32,7 @@ namespace BSWindowManager
         #region BSIPA Config
         //Uncomment to use BSIPA's config
         [Init]
-        public void InitWithConfig(Config conf)
+        public void InitWithConfig(IPA.Config.Config conf)
         {
             Configuration.PluginConfig.Instance = conf.Generated<Configuration.PluginConfig>();
             Log.Debug("Config loaded");
@@ -48,17 +46,12 @@ namespace BSWindowManager
             Log.Debug("OnApplicationStart");
             new GameObject("BSWindowManagerController").AddComponent<BSWindowManagerController>();
             new GameObject("Setting").AddComponent<BSMLSettings>();
-            SceneManager.activeSceneChanged += this.SceneManager_activeSceneChanged;
+            BSEvents.earlyMenuSceneLoadedFresh += this.BSEvents_earlyMenuSceneLoadedFresh;
         }
 
-        private void SceneManager_activeSceneChanged(Scene arg0, Scene arg1)
+        private void BSEvents_earlyMenuSceneLoadedFresh(ScenesTransitionSetupDataSO obj)
         {
-            if (this._isInit && arg1.name != "MenuCore") {
-                return;
-            }
-
             BSMLSettings.instance.AddSettingsMenu("BS WINDOW MANAGER", Setting.instance.ResourceName, Setting.instance);
-            this._isInit = true;
         }
 
         [OnExit]

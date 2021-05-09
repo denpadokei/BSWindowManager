@@ -1,5 +1,5 @@
 ﻿<bg xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='https://monkeymanboy.github.io/BSML-Docs/ https://raw.githubusercontent.com/monkeymanboy/BSML-Docs/gh-pages/BSMLSchema.xsd'>
-  <vertical horizontal-fit='PreferredSize'>
+  <settings-container>
     <checkbox value='auto-active' bind-value='true' text='Auto active' hover-hint='Auto active Window'/>
-  </vertical>
+  </settings-container>
 </bg>
