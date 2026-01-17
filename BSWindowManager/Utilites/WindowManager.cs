@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BSWindowManager.Utils
 {
@@ -17,19 +13,25 @@ namespace BSWindowManager.Utils
         /// <param name="hWnd">ウィンドウハンドル</param>
         public static void ActiveWindow(IntPtr hWnd)
         {
-            if (hWnd == IntPtr.Zero) {
+            if (hWnd == IntPtr.Zero)
+            {
+                Plugin.Log.Debug("WindowManager.ActiveWindow: Invalid window handle");
                 return;
             }
 
             //ウィンドウが最小化されている場合は元に戻す
-            if (IsIconic(hWnd)) {
+            if (IsIconic(hWnd))
+            {
+                Plugin.Log.Debug("WindowManager.ActiveWindow: Window is minimized. Restoring");
                 ShowWindowAsync(hWnd, SW_RESTORE);
             }
 
             //AttachThreadInputの準備
             //フォアグラウンドウィンドウのハンドルを取得
             IntPtr forehWnd = GetForegroundWindow();
-            if (forehWnd == hWnd) {
+            if (forehWnd == hWnd)
+            {
+                Plugin.Log.Debug("WindowManager.ActiveWindow: Window is already in foreground");
                 return;
             }
             //フォアグラウンドのスレッドIDを取得
@@ -38,39 +40,89 @@ namespace BSWindowManager.Utils
             uint thisThread = GetCurrentThreadId();
 
             uint timeout = 200000;
-            if (foreThread != thisThread) {
-                //ForegroundLockTimeoutの現在の設定を取得
-                //Visual Studio 2010, 2012起動後は、レジストリと違う値を返す
-                SystemParametersInfoGet(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, ref timeout, 0);
-                //レジストリから取得する場合
-                //timeout = (uint)Microsoft.Win32.Registry.GetValue(
-                //    @"HKEY_CURRENT_USER\Control Panel\Desktop",
-                //    "ForegroundLockTimeout", 200000);
+            bool threadAttached = false;
 
-                //ForegroundLockTimeoutの値を0にする
-                //(SPIF_UPDATEINIFILE | SPIF_SENDCHANGE)を使いたいが、
-                //  timeoutがレジストリと違う値だと戻せなくなるので使わない
-                SystemParametersInfoSet(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, 0);
+            try
+            {
+                if (foreThread != thisThread)
+                {
+                    //ForegroundLockTimeoutの現在の設定を取得
+                    //Visual Studio 2010, 2012起動後は、レジストリと違う値を返す
+                    if (!SystemParametersInfoGet(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, ref timeout, 0))
+                    {
+                        Plugin.Log.Debug("WindowManager.ActiveWindow: Failed to get ForegroundLockTimeout");
+                        timeout = 200000;
+                    }
+                    //レジストリから取得する場合
+                    //timeout = (uint)Microsoft.Win32.Registry.GetValue(
+                    //    @"HKEY_CURRENT_USER\Control Panel\Desktop",
+                    //    "ForegroundLockTimeout", 200000);
 
-                //入力処理機構にアタッチする
-                AttachThreadInput(thisThread, foreThread, true);
+                    //ForegroundLockTimeoutの値を0にする
+                    //(SPIF_UPDATEINIFILE | SPIF_SENDCHANGE)を使いたいが、
+                    //  timeoutがレジストリと違う値だと戻せなくなるので使わない
+                    if (!SystemParametersInfoSet(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, 0, 0))
+                    {
+                        Plugin.Log.Debug("WindowManager.ActiveWindow: Failed to set ForegroundLockTimeout to 0");
+                    }
+
+                    //入力処理機構にアタッチする
+                    if (!AttachThreadInput(thisThread, foreThread, true))
+                    {
+                        Plugin.Log.Debug("WindowManager.ActiveWindow: AttachThreadInput failed");
+                    }
+                    else
+                    {
+                        threadAttached = true;
+                    }
+                }
+
+                //ウィンドウをフォアグラウンドにする処理
+                if (!SetForegroundWindow(hWnd))
+                {
+                    Plugin.Log.Debug("WindowManager.ActiveWindow: SetForegroundWindow failed");
+                }
+
+                if (!SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_ASYNCWINDOWPOS))
+                {
+                    Plugin.Log.Debug("WindowManager.ActiveWindow: SetWindowPos failed");
+                }
+
+                if (!BringWindowToTop(hWnd))
+                {
+                    Plugin.Log.Debug("WindowManager.ActiveWindow: BringWindowToTop failed");
+                }
+
+                if (!ShowWindowAsync(hWnd, SW_SHOW))
+                {
+                    Plugin.Log.Debug("WindowManager.ActiveWindow: ShowWindowAsync failed");
+                }
+
+                if (SetFocus(hWnd) == IntPtr.Zero)
+                {
+                    Plugin.Log.Debug("WindowManager.ActiveWindow: SetFocus failed");
+                }
+
+                Plugin.Log.Debug("WindowManager.ActiveWindow: Successfully set window to foreground");
             }
+            finally
+            {
+                if (foreThread != thisThread && threadAttached)
+                {
+                    //ForegroundLockTimeoutの値を元に戻す
+                    //ここでも(SPIF_UPDATEINIFILE | SPIF_SENDCHANGE)は使わない
+                    if (!SystemParametersInfoSet(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, timeout, 0))
+                    {
+                        Plugin.Log.Debug("WindowManager.ActiveWindow: Failed to restore ForegroundLockTimeout");
+                    }
 
-            //ウィンドウをフォアグラウンドにする処理
-            SetForegroundWindow(hWnd);
-            SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_ASYNCWINDOWPOS);
-            BringWindowToTop(hWnd);
-            ShowWindowAsync(hWnd, SW_SHOW);
-            SetFocus(hWnd);
-
-            if (foreThread != thisThread) {
-                //ForegroundLockTimeoutの値を元に戻す
-                //ここでも(SPIF_UPDATEINIFILE | SPIF_SENDCHANGE)は使わない
-                SystemParametersInfoSet(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, timeout, 0);
-
-                //デタッチ
-                AttachThreadInput(thisThread, foreThread, false);
+                    //デタッチ
+                    if (!AttachThreadInput(thisThread, foreThread, false))
+                    {
+                        Plugin.Log.Debug("WindowManager.ActiveWindow: Failed to detach AttachThreadInput");
+                    }
+                }
             }
         }
 
@@ -86,7 +138,7 @@ namespace BSWindowManager.Utils
         private static extern bool BringWindowToTop(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        static extern IntPtr SetFocus(IntPtr hWnd);
+        private static extern IntPtr SetFocus(IntPtr hWnd);
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]

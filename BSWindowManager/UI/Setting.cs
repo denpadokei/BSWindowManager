@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using BeatSaberMarkupLanguage;
-using BeatSaberMarkupLanguage.Attributes;
-using BeatSaberMarkupLanguage.Components;
+﻿using BeatSaberMarkupLanguage.Attributes;
+using BeatSaberMarkupLanguage.Settings;
 using BeatSaberMarkupLanguage.ViewControllers;
 using BSWindowManager.Configuration;
-using UnityEngine;
+using System.Reflection;
+using Zenject;
 
 namespace BSWindowManager.UI
 {
-    internal class Setting : PersistentSingleton<Setting>, INotifyPropertyChanged
+    internal class Setting : BSMLAutomaticViewController, IInitializable
     {
         // For this method of setting the ResourceName, this class must be the first class in the file.
         public string ResourceName => string.Join(".", GetType().Namespace, "Setting.bsml");
@@ -29,16 +24,9 @@ namespace BSWindowManager.UI
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void NotifyPropertyChanged([CallerMemberName]string member = null)
+        public void Initialize()
         {
-            this.OnPropertyChanged(new PropertyChangedEventArgs(member));
-        }
-
-        protected virtual void OnPropertyChanged(PropertyChangedEventArgs e)
-        {
-            this.PropertyChanged?.Invoke(this, e);
+            BSMLSettings.Instance.AddSettingsMenu("BS WINDOW MANAGER", ResourceName, this);
         }
     }
 }
